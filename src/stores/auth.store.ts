@@ -67,5 +67,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   setTokens: async (tokens: Tokens) => {
     await TokenStorage.set(tokens);
+    set({ isLoggedIn: true });
   },
 }));
