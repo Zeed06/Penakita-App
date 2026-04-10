@@ -105,7 +105,7 @@ export default function TabsLayout() {
               return (
                 <View className={`w-7 h-7 rounded-full items-center justify-center bg-primary-100 ${focused ? 'border-2 border-primary-600' : ''}`}>
                   <Text className="text-xs font-bold text-primary-600">
-                    {user.fullName.charAt(0).toUpperCase()}
+                    {(user.fullName || user.username || '?').charAt(0).toUpperCase()}
                   </Text>
                 </View>
               );

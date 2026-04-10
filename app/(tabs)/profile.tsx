@@ -63,14 +63,14 @@ export default function CurrentUserProfileScreen() {
             ) : (
               <View className="w-20 h-20 rounded-full bg-[#af52de] items-center justify-center">
                 <Text className="text-white text-3xl font-bold">
-                  {profile.fullName.charAt(0).toUpperCase()}
+                  {(profile.fullName || profile.username || '?').charAt(0).toUpperCase()}
                 </Text>
               </View>
             )}
           </View>
           <View className="flex-1">
             <Text className="text-2xl font-bold text-ink mb-1">
-              {profile.fullName}
+              {profile.fullName || profile.username}
             </Text>
             <Text className="text-sm text-[#6B6B6B]">
               0 followers · 0 following

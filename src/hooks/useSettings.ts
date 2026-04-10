@@ -17,6 +17,54 @@ export function useSettingsProfile() {
   });
 }
 
+// --- Helper: Sync user data across multiple query caches ---
+function syncUserCache(queryClient: any, updatedProfile: any) {
+  // 1. Cross-Cache Synchronization: Update all articles in all feeds where I am the author
+  queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
+    if (!old) return old;
+
+    // Handle InfiniteQuery structure (Feed)
+    if (old.pages) {
+      const infiniteOld = old as InfiniteData<FeedResponse>;
+      return {
+        ...infiniteOld,
+        pages: infiniteOld.pages.map(page => ({
+          ...page,
+          items: page.items.map(item => 
+            item.author.id === updatedProfile.id 
+            ? { 
+                ...item, 
+                author: { 
+                  ...item.author, 
+                  username: updatedProfile.username ?? item.author.username, 
+                  fullName: updatedProfile.fullName ?? item.author.fullName,
+                  avatarUrl: updatedProfile.avatarUrl !== undefined ? updatedProfile.avatarUrl : item.author.avatarUrl
+                } 
+              } 
+            : item
+          )
+        }))
+      };
+    }
+
+    // Handle single Post structure
+    const singleOld = old as Post;
+    if (singleOld.author && singleOld.author.id === updatedProfile.id) {
+      return {
+        ...singleOld,
+        author: {
+          ...singleOld.author,
+          username: updatedProfile.username ?? singleOld.author.username,
+          fullName: updatedProfile.fullName ?? singleOld.author.fullName,
+          avatarUrl: updatedProfile.avatarUrl !== undefined ? updatedProfile.avatarUrl : singleOld.author.avatarUrl
+        }
+      };
+    }
+
+    return old;
+  });
+}
+
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   const setUser = useAuthStore((state) => state.setUser);
@@ -36,52 +84,10 @@ export function useUpdateProfile() {
       queryClient.setQueryData(['settings', 'profile'], mergedProfile);
       queryClient.invalidateQueries({ queryKey: ['user', updatedProfile.username] });
       
-      // 1. Cross-Cache Synchronization: Update all articles in all feeds where I am the author
-      queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
-        if (!old) return old;
+      // 1. Sync cache across posts
+      syncUserCache(queryClient, mergedProfile);
 
-        // Handle InfiniteQuery structure (Feed)
-        if (old.pages) {
-          const infiniteOld = old as InfiniteData<FeedResponse>;
-          return {
-            ...infiniteOld,
-            pages: infiniteOld.pages.map(page => ({
-              ...page,
-              items: page.items.map(item => 
-                item.author.id === mergedProfile.id 
-                ? { 
-                    ...item, 
-                    author: { 
-                      ...item.author, 
-                      username: mergedProfile.username, 
-                      fullName: mergedProfile.fullName,
-                      avatarUrl: mergedProfile.avatarUrl // Use the merged one
-                    } 
-                  } 
-                : item
-              )
-            }))
-          };
-        }
-
-        // Handle single Post structure
-        const singleOld = old as Post;
-        if (singleOld.author && singleOld.author.id === mergedProfile.id) {
-          return {
-            ...singleOld,
-            author: {
-              ...singleOld.author,
-              username: mergedProfile.username,
-              fullName: mergedProfile.fullName,
-              avatarUrl: mergedProfile.avatarUrl
-            }
-          };
-        }
-
-        return old;
-      });
-
-      // 2. Update global auth store user with defensive avatar check
+      // 2. Update global auth store user
       setUser({
         id: mergedProfile.id,
         username: mergedProfile.username,
@@ -118,13 +124,21 @@ export function useUpdateAvatar() {
   return useMutation({
     mutationFn: (uri: string | null) => settingsService.updateAvatar(uri),
     onSuccess: (updatedProfile) => {
-      queryClient.setQueryData(['settings', 'profile'], updatedProfile);
+      // 1. Update the profile cache with merge
+      queryClient.setQueryData(['settings', 'profile'], (old: any) => ({
+        ...old,
+        ...updatedProfile,
+      }));
+      
+      // 2. Sync cache across posts
+      syncUserCache(queryClient, updatedProfile);
+      
       queryClient.invalidateQueries({ queryKey: ['user', updatedProfile.username] });
       
       if (currentUser) {
         setUser({
           ...currentUser,
-          avatarUrl: updatedProfile.avatarUrl,
+          ...updatedProfile,
         });
       }
     },
