@@ -42,6 +42,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['System'],
+        serif: ['Georgia', 'serif'],
       },
     },
   },

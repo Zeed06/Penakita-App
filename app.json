@@ -18,12 +18,13 @@
     },
     "android": {
       "jsEngine": "hermes",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.jpeg",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.zeed06.Penakita"
     },
     "web": {
       "favicon": "./assets/favicon.png"

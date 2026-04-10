@@ -1,7 +1,7 @@
 // app/(auth)/login.tsx
 // Login screen with email/password form + Google OAuth
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 
 import { loginSchema, type LoginFormData } from '../../src/validations/auth.schema';
 import { authService } from '../../src/services/auth.service';
@@ -28,11 +29,8 @@ import { getErrorFromResponse } from '../../src/utils/errorHandler';
 // Required for Google OAuth popup to close properly
 WebBrowser.maybeCompleteAuthSession();
 
-// Google OAuth discovery document
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-};
+// Google OAuth discovery is handled automatically by the provider hook
+
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -44,6 +42,65 @@ export default function LoginScreen() {
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
+
+  // ── Google OAuth Success Handler ──
+  const handleGoogleSuccess = useCallback(async (idToken: string) => {
+    setIsGoogleLoading(true);
+    try {
+      const data = await authService.googleAuth(idToken);
+
+      await TokenStorage.set({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        expiresIn: data.expiresIn,
+        tokenType: data.tokenType,
+      });
+
+      await setTokens({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        expiresIn: data.expiresIn,
+        tokenType: data.tokenType,
+      });
+
+      if (data.isNewUser) {
+        Toast.show({ type: 'success', text1: 'Selamat datang di Penakita! 🎉' });
+      } else if (data.linked) {
+        Toast.show({ type: 'success', text1: 'Akun Google berhasil ditautkan' });
+      }
+
+      router.replace('/(tabs)');
+    } catch (error: unknown) {
+      const message = getErrorFromResponse(error);
+      if (message) {
+        Toast.show({ type: 'error', text1: message });
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }, [setTokens, router]);
+
+  // ── Google OAuth Hook ──
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+
+  // Handle Google Auth Response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleSuccess(id_token);
+    } else if (response?.type === 'error') {
+      Toast.show({
+        type: 'error',
+        text1: 'Login Google gagal. Coba lagi.',
+      });
+      setIsGoogleLoading(false);
+    }
+  }, [response, handleGoogleSuccess]);
+
+
 
   const {
     control,
@@ -129,66 +186,13 @@ export default function LoginScreen() {
     }
   }, [unverifiedEmail, isResending]);
 
-  // ── Google OAuth ──
   const handleGoogleLogin = useCallback(async () => {
+    if (!request) return;
     setIsGoogleLoading(true);
-    try {
-      const redirectUri = AuthSession.makeRedirectUri();
+    promptAsync();
+  }, [request, promptAsync]);
 
-      const request = new AuthSession.AuthRequest({
-        clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? '',
-        scopes: ['openid', 'profile', 'email'],
-        redirectUri,
-        responseType: AuthSession.ResponseType.IdToken,
-      });
 
-      const result = await request.promptAsync(discovery);
-
-      if (result.type === 'success' && result.params.id_token) {
-        const data = await authService.googleAuth(result.params.id_token);
-
-        await TokenStorage.set({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          expiresIn: data.expiresIn,
-          tokenType: data.tokenType,
-        });
-
-        await setTokens({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          expiresIn: data.expiresIn,
-          tokenType: data.tokenType,
-        });
-
-        if (data.isNewUser) {
-          Toast.show({
-            type: 'success',
-            text1: 'Selamat datang di Penakita! 🎉',
-          });
-        } else if (data.linked) {
-          Toast.show({
-            type: 'success',
-            text1: 'Akun Google berhasil ditautkan',
-          });
-        }
-
-        router.replace('/(tabs)');
-      } else if (result.type === 'error') {
-        Toast.show({
-          type: 'error',
-          text1: 'Login Google gagal. Coba lagi.',
-        });
-      }
-    } catch (error: unknown) {
-      const message = getErrorFromResponse(error);
-      if (message) {
-        Toast.show({ type: 'error', text1: message });
-      }
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  }, [setUser, setTokens, router]);
 
   const isDisabled = isSubmitting || isRateLimited;
 

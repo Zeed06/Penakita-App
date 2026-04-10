@@ -1,8 +1,8 @@
 // app/editor/index.tsx
 // Main post drafting screen containing the block editor
 
-import React, { useState } from 'react';
-import { View, TextInput, ScrollView, KeyboardAvoidingView, Platform, Pressable, Text, ActivityIndicator } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, TextInput, ScrollView, KeyboardAvoidingView, Platform, Pressable, Text, ActivityIndicator, Keyboard } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -16,6 +16,7 @@ import { uploadToCloudinary } from '../../src/utils/cloudinary';
 
 export default function EditorDraftScreen() {
   const router = useRouter();
+  const scrollViewRef = useRef<ScrollView>(null);
   
   // Editor State
   const title = useEditorStore((state) => state.title);
@@ -67,7 +68,8 @@ export default function EditorDraftScreen() {
   return (
     <KeyboardAvoidingView 
       className="flex-1 bg-white" 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
     >
       <Stack.Screen 
         options={{
@@ -92,7 +94,12 @@ export default function EditorDraftScreen() {
         }} 
       />
 
-      <ScrollView className="flex-1 px-5 pt-4">
+      <ScrollView 
+        ref={scrollViewRef}
+        className="flex-1 px-5 pt-4"
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 300 }}
+      >
         {/* Title Input */}
         <TextInput
           value={title}
@@ -137,7 +144,7 @@ export default function EditorDraftScreen() {
         )}
         
         {/* Block Editor */}
-        <BlockEditor />
+        <BlockEditor scrollViewRef={scrollViewRef} />
         
       </ScrollView>
 

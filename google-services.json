@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "922561215359",
+    "project_id": "penakita-04",
+    "storage_bucket": "penakita-04.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:922561215359:android:b613b1a296e3f6550bb84a",
+        "android_client_info": {
+          "package_name": "com.zeed06.Penakita"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "922561215359-8sfs1862jnt063tr5dq9t47kkiijgk5k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zeed06.Penakita",
+            "certificate_hash": "bdbbe55df3c88f8f787960ab0116f740405eac5d"
+          }
+        },
+        {
+          "client_id": "922561215359-it6vsglfakmjfeucib5etove78p7iagj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZV0Ul0MJGHmEjlj7GsrL1vi5gF-RG5ag"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "922561215359-it6vsglfakmjfeucib5etove78p7iagj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

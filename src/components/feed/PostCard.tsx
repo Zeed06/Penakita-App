@@ -3,8 +3,9 @@
 
 import { memo, useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { Image } from 'expo-image';
+import { Image, ImageProps } from 'expo-image';
 import { useRouter } from 'expo-router';
+import Animated, { AnimatedProps } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
@@ -13,6 +14,10 @@ import type { Post } from '../../types/post.types';
 import { formatDate } from '../../utils/date';
 import { useAuthStore } from '../../stores/auth.store';
 import { useDeletePost } from '../../hooks/useEditor';
+
+const AnimatedImage = Animated.createAnimatedComponent(Image) as React.ComponentType<
+  AnimatedProps<ImageProps> & { sharedTransitionTag?: string }
+>;
 
 interface PostCardProps {
   post: Post;
@@ -105,7 +110,7 @@ function PostCardComponent({ post }: PostCardProps) {
             </Text>
           </View>
         )}
-        <Text className="text-[13px] text-[#242424] ml-2 font-medium">
+        <Text className="text-[12px] text-[#242424] ml-2 font-medium">
           {post.author?.fullName || post.author?.username || 'Unknown Author'}
         </Text>
       </Pressable>
@@ -115,14 +120,14 @@ function PostCardComponent({ post }: PostCardProps) {
         {/* Text Content */}
         <View className="flex-1 pr-4 justify-center">
           <Text
-            className="text-[18px] font-bold text-[#242424] leading-6 mb-1 font-serif"
+            className="text-base font-bold text-[#242424] leading-6 mb-1 font-serif"
             numberOfLines={2}
           >
             {post.title}
           </Text>
           {preview.length > 0 && (
             <Text
-              className="text-[14px] text-[#6B6B6B] leading-5 font-serif"
+              className="text-[13px] text-[#6B6B6B] leading-5 font-serif"
               numberOfLines={2}
             >
               {preview}
@@ -132,11 +137,12 @@ function PostCardComponent({ post }: PostCardProps) {
 
         {/* Cover Image */}
         {previewImage && (
-          <Image
+          <AnimatedImage
             source={{ uri: previewImage }}
-            className="w-[150px] h-[100px] bg-[#f2f2f2]"
+            className="w-[110px] h-[80px] bg-[#f2f2f2]"
             contentFit="cover"
             transition={200}
+            sharedTransitionTag={`image-${post.id}`}
           />
         )}
       </View>

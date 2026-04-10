@@ -53,10 +53,25 @@ function RootNavigator() {
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
+        }}
+      >
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="editor" />
+        <Stack.Screen 
+          name="post/[slug]" 
+          options={{ 
+            animation: 'fade',
+            presentation: 'transparentModal', // Optional: can help with smooth shared element if needed
+            headerShown: false 
+          }} 
+        />
       </Stack>
       <Toast />
     </>
