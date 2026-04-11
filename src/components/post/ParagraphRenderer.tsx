@@ -5,6 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { MarkupText } from './MarkupText';
 import type { Paragraph } from '../../types/post.types';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ParagraphRendererProps {
   paragraph: Paragraph;
@@ -106,7 +107,22 @@ function ParagraphRendererComponent({ paragraph, index }: ParagraphRendererProps
           <View className="flex-row my-1.5 pl-2">
             <Text className="text-base text-ink mr-2.5">•</Text>
             <View className="flex-1">
-              <MarkupText text={text} markups={markups} className="text-base text-ink leading-6" />
+              <MarkupText text={text} markups={markups} className="text-base text-ink leading-6 font-serif" />
+            </View>
+          </View>
+        );
+
+      case 'link':
+        return (
+          <View className="my-4 bg-primary-50 p-4 rounded-xl border border-primary-100">
+            <View className="flex-row items-center">
+              <Ionicons name="link-outline" size={20} color="#0891b2" />
+              <Text
+                numberOfLines={1}
+                className="ml-2 text-primary-700 font-medium flex-1 underline"
+              >
+                {text}
+              </Text>
             </View>
           </View>
         );

@@ -114,9 +114,35 @@ export function useDeletePost() {
 
   return useMutation({
     mutationFn: (id: string) => postService.deletePost(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    onMutate: async (deletedId) => {
+      // 1. Batalkan fetching yang sedang berjalan agar tidak saling timpang
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+
+      // 2. Simpan cache lama (kalau butuh rollback)
+      const previousPosts = queryClient.getQueryData(['posts']);
+
+      // 3. SECARA OPTIMIS hilangkan item dengan id tersebut dari semua list ['posts'] yang ada
+      queryClient.setQueriesData({ queryKey: ['posts'] }, (oldData: any) => {
+        if (!oldData || !oldData.pages) return oldData;
+        const newPages = oldData.pages.map((page: any) => ({
+          ...page,
+          items: page.items.filter((item: any) => item.id !== deletedId),
+        }));
+        return { ...oldData, pages: newPages };
+      });
+
+      return { previousPosts };
     },
+    onError: (err, deletedId, context) => {
+      // 4. Jika gagal hapus (misal error di server), pulihkan artikelnya (Rollback)
+      if (context?.previousPosts) {
+        queryClient.setQueryData(['posts'], context.previousPosts);
+      }
+    },
+    // onSuccess: () => {
+    // Celoteh Backend Cache: Kita JANGAN invalidateQueries supaya tidak menarik cache basi.
+    // Biarkan aplikasi mengandalkan penghapusan otomatis (optimistic deletion) di frontend saja.
+    // },
   });
 }
 

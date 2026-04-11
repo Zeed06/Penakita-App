@@ -16,9 +16,11 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 
 import { loginSchema, type LoginFormData } from '../../src/validations/auth.schema';
 import { authService } from '../../src/services/auth.service';
@@ -26,10 +28,11 @@ import { TokenStorage } from '../../src/utils/tokenStorage';
 import { useAuthStore } from '../../src/stores/auth.store';
 import { getErrorFromResponse } from '../../src/utils/errorHandler';
 
-// Required for Google OAuth popup to close properly
-WebBrowser.maybeCompleteAuthSession();
-
-// Google OAuth discovery is handled automatically by the provider hook
+// Configure Google Sign-in
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  offlineAccess: false, // Set to true if you need a refresh token for backend to access Google APIs directly
+});
 
 
 export default function LoginScreen() {
@@ -80,28 +83,7 @@ export default function LoginScreen() {
     }
   }, [setTokens, router]);
 
-  // ── Google OAuth Hook ──
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    redirectUri: 'com.zeed06.penakita:/oauth2redirect',
-  });
 
-
-
-  // Handle Google Auth Response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      handleGoogleSuccess(id_token);
-    } else if (response?.type === 'error') {
-      Toast.show({
-        type: 'error',
-        text1: 'Login Google gagal. Coba lagi.',
-      });
-      setIsGoogleLoading(false);
-    }
-  }, [response, handleGoogleSuccess]);
 
 
 
@@ -190,10 +172,38 @@ export default function LoginScreen() {
   }, [unverifiedEmail, isResending]);
 
   const handleGoogleLogin = useCallback(async () => {
-    if (!request) return;
     setIsGoogleLoading(true);
-    promptAsync();
-  }, [request, promptAsync]);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      
+      // userInfo.data.idToken contains the JWT token needed by the backend
+      if (userInfo.data?.idToken) {
+        await handleGoogleSuccess(userInfo.data.idToken);
+      } else {
+        throw new Error('Gagal mendapatkan ID Token dari Google');
+      }
+    } catch (error: any) {
+      setIsGoogleLoading(false);
+      if (isErrorWithCode(error)) {
+        switch (error.code) {
+          case statusCodes.SIGN_IN_CANCELLED:
+            // user cancelled the login flow peacefully
+            break;
+          case statusCodes.IN_PROGRESS:
+            // operation (e.g. sign in) is in progress already
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            Toast.show({ type: 'error', text1: 'Layanan Google Play tidak tersedia di perangkat ini' });
+            break;
+          default:
+            Toast.show({ type: 'error', text1: 'Login Google gagal: ' + error.message });
+        }
+      } else {
+        Toast.show({ type: 'error', text1: error.message || 'Terjadi kesalahan saat login Google' });
+      }
+    }
+  }, [handleGoogleSuccess]);
 
 
 

@@ -19,6 +19,7 @@ interface EditorState {
   removeParagraph: (id: string) => void;
   
   // Load/Reset
+  setParagraphs: (paragraphs: Paragraph[]) => void;
   resetEditor: () => void;
 }
 
@@ -92,6 +93,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       activeParagraphId: nextActiveId,
     };
   }),
+
+  setParagraphs: (paragraphs) => set({ paragraphs }),
 
   resetEditor: () => set(DEFAULT_STATE),
 }));

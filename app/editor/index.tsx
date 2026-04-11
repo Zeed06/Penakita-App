@@ -10,13 +10,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 
 import { useEditorStore } from '../../src/stores/editor.store';
-import { BlockEditor, EditorToolbar } from '../../src/components/editor';
+import { MediumEditor } from '../../src/components/editor/MediumEditor';
 import { useCreateDraft, useUpdatePost } from '../../src/hooks/useEditor';
 import { uploadToCloudinary } from '../../src/utils/cloudinary';
 
 export default function EditorDraftScreen() {
   const router = useRouter();
-  const scrollViewRef = useRef<ScrollView>(null);
   
   // Editor State
   const title = useEditorStore((state) => state.title);
@@ -29,7 +28,7 @@ export default function EditorDraftScreen() {
 
   const handlePublishFlow = () => {
     // Check if the post meets minimum requirements to publish
-    if (!title.trim() || paragraphs.length === 0 || !paragraphs[0].text?.trim()) {
+    if (!title.trim() || paragraphs.length === 0 || !paragraphs.some(p => p.text?.trim())) {
       Toast.show({ type: 'error', text1: 'Isi tidak lengkap', text2: 'Judul dan isi artikel harus diisi.' });
       return;
     }
@@ -66,11 +65,7 @@ export default function EditorDraftScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      className="flex-1 bg-white" 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
-    >
+    <View className="flex-1 bg-white">
       <Stack.Screen 
         options={{
           headerShown: true,
@@ -94,62 +89,63 @@ export default function EditorDraftScreen() {
         }} 
       />
 
-      <ScrollView 
-        ref={scrollViewRef}
-        className="flex-1 px-5 pt-4"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 300 }}
-      >
-        {/* Title Input */}
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Judul Artikel..."
-          placeholderTextColor="#ced4da"
-          multiline
-          className="text-3xl font-bold text-ink mb-6"
-          style={{ lineHeight: 40 }}
-        />
+      {/* Main Content Area */}
+      <View style={{ flex: 1 }}>
+        <ScrollView 
+          className="px-5 pt-4"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 20 }}
+          scrollEnabled={true} // Allow scrolling for Title/Cover, but MediumEditor will take its own space
+        >
+          {/* Title Input */}
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Judul Artikel..."
+            placeholderTextColor="#ced4da"
+            multiline
+            className="text-3xl font-bold text-ink mb-6"
+            style={{ lineHeight: 40 }}
+          />
 
-        {/* Cover Image Section */}
-        {coverImage ? (
-          <View className="relative mb-6 rounded-xl overflow-hidden bg-surface-tertiary">
-            <Image 
-              source={{ uri: coverImage }} 
-              className="w-full aspect-video" 
-              contentFit="cover"
-            />
+          {/* Cover Image Section */}
+          {coverImage ? (
+            <View className="relative mb-6 rounded-xl overflow-hidden bg-surface-tertiary">
+              <Image 
+                source={{ uri: coverImage }} 
+                className="w-full aspect-video" 
+                contentFit="cover"
+              />
+              <Pressable 
+                onPress={handleRemoveCover}
+                className="absolute top-2 right-2 bg-black/50 p-2 rounded-full"
+              >
+                <Ionicons name="trash-outline" size={20} color="white" />
+              </Pressable>
+            </View>
+          ) : (
             <Pressable 
-              onPress={handleRemoveCover}
-              className="absolute top-2 right-2 bg-black/50 p-2 rounded-full"
+              onPress={handlePickCoverImage}
+              disabled={isUploadingCover}
+              className="mb-6 h-40 border-2 border-dashed border-surface-tertiary rounded-xl items-center justify-center bg-surface-secondary active:opacity-70"
             >
-              <Ionicons name="trash-outline" size={20} color="white" />
+              {isUploadingCover ? (
+                <ActivityIndicator color="#4c6ef5" />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={32} color="#adb5bd" />
+                  <Text className="text-ink-tertiary mt-2 font-medium">Tambah Gambar Sampul</Text>
+                </>
+              )}
             </Pressable>
-          </View>
-        ) : (
-          <Pressable 
-            onPress={handlePickCoverImage}
-            disabled={isUploadingCover}
-            className="mb-6 h-40 border-2 border-dashed border-surface-tertiary rounded-xl items-center justify-center bg-surface-secondary active:opacity-70"
-          >
-            {isUploadingCover ? (
-              <ActivityIndicator color="#4c6ef5" />
-            ) : (
-              <>
-                <Ionicons name="image-outline" size={32} color="#adb5bd" />
-                <Text className="text-ink-tertiary mt-2 font-medium">Tambah Gambar Sampul</Text>
-              </>
-            )}
-          </Pressable>
-        )}
+          )}
+        </ScrollView>
         
-        {/* Block Editor */}
-        <BlockEditor scrollViewRef={scrollViewRef} />
-        
-      </ScrollView>
-
-      {/* Formatting Accessories */}
-      <EditorToolbar />
-    </KeyboardAvoidingView>
+        {/* The new Rich Text Editor */}
+        <View style={{ flex: 1, marginTop: -20 }}>
+          <MediumEditor />
+        </View>
+      </View>
+    </View>
   );
 }
