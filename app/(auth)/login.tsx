@@ -84,7 +84,10 @@ export default function LoginScreen() {
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    redirectUri: 'com.zeed06.penakita:/oauth2redirect',
   });
+
+
 
   // Handle Google Auth Response
   useEffect(() => {

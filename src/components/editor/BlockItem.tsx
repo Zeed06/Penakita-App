@@ -9,7 +9,7 @@ import { useEditorStore } from '../../stores/editor.store';
 interface BlockItemProps {
   id: string;
   isFirst: boolean;
-  scrollViewRef: React.RefObject<ScrollView>;
+  scrollViewRef: React.RefObject<ScrollView | null>;
 }
 
 export function BlockItem({ id, isFirst, scrollViewRef }: BlockItemProps) {

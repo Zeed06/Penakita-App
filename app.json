@@ -3,7 +3,7 @@
     "name": "Penakita",
     "slug": "Penakita",
     "version": "1.0.0",
-    "scheme": "penakita",
+    "scheme": ["penakita", "com.zeed06.penakita"],
     "orientation": "portrait",
     "icon": "./assets/logo.jpeg",
     "userInterfaceStyle": "light",

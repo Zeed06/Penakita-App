@@ -7,7 +7,7 @@ import { useEditorStore } from '../../stores/editor.store';
 import { BlockItem } from './BlockItem';
 
 interface BlockEditorProps {
-  scrollViewRef: React.RefObject<ScrollView>;
+  scrollViewRef: React.RefObject<ScrollView | null>;
 }
 
 export function BlockEditor({ scrollViewRef }: BlockEditorProps) {
