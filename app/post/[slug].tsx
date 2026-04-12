@@ -178,9 +178,21 @@ export default function PostDetailScreen() {
           className="px-5"
           entering={FadeIn.delay(500).duration(800)}
         >
-          {post.bodyModel.paragraphs.map((p, idx) => (
-            <ParagraphRenderer key={p.id} paragraph={p} index={idx} />
-          ))}
+          {(() => {
+            let runningListIndex = 0;
+            return post.bodyModel.paragraphs.map((p, idx) => {
+              // If current paragraph is an ordered list item
+              if (p.type === 'OLI') {
+                const currentListIndex = runningListIndex;
+                runningListIndex++;
+                return <ParagraphRenderer key={p.id} paragraph={p} index={idx} listIndex={currentListIndex} />;
+              } else {
+                // Reset index if we break the list sequence
+                runningListIndex = 0;
+                return <ParagraphRenderer key={p.id} paragraph={p} index={idx} />;
+              }
+            });
+          })()}
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (

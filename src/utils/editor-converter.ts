@@ -21,7 +21,11 @@ export function convertTiptapToBodyModel(tiptapJson: any): BodyModel {
 function processNode(node: any, paragraphs: Paragraph[]) {
   switch (node.type) {
     case 'paragraph':
-      paragraphs.push(createParagraph(node, 'P'));
+      // Only push if there is actually content or marks, to prevent ghost lines
+      const p = createParagraph(node, 'P');
+      if ((p.text?.trim().length ?? 0) > 0 || (p.markups && p.markups.length > 0)) {
+        paragraphs.push(p);
+      }
       break;
     case 'heading':
       const level = node.attrs?.level || 1;

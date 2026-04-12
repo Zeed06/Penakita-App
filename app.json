@@ -8,11 +8,10 @@
       "com.zeed06.penakita"
     ],
     "orientation": "portrait",
-    "icon": "./assets/logo.jpeg",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
-      "image": "./assets/logo.jpeg",
+      "image": "./assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -20,13 +19,11 @@
       "supportsTablet": true
     },
     "android": {
-      "jsEngine": "hermes",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.jpeg",
+        "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
-      "predictiveBackGestureEnabled": false,
       "package": "com.zeed06.Penakita"
     },
     "web": {
@@ -36,7 +33,8 @@
       "expo-secure-store",
       "expo-router",
       "expo-web-browser",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-font"
     ],
     "extra": {
       "router": {},

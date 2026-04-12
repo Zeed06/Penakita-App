@@ -1,2 +1,3 @@
 // src/components/editor/index.ts
-export * from './MediumEditor';
+// This file is currently not in use.
+export {};

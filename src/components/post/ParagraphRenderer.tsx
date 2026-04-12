@@ -10,9 +10,10 @@ import { Ionicons } from '@expo/vector-icons';
 interface ParagraphRendererProps {
   paragraph: Paragraph;
   index: number;
+  listIndex?: number;
 }
 
-function ParagraphRendererComponent({ paragraph, index }: ParagraphRendererProps) {
+function ParagraphRendererComponent({ paragraph, index, listIndex }: ParagraphRendererProps) {
   const { type, text = '', markups = [], metadata = {} } = paragraph;
 
   // Wrap content in Animated.View for staggered fade-in effect
@@ -95,7 +96,7 @@ function ParagraphRendererComponent({ paragraph, index }: ParagraphRendererProps
       case 'OLI':
         return (
           <View className="flex-row my-1.5 pl-2">
-            <Text className="text-base text-ink font-semibold mr-2">{index + 1}.</Text>
+            <Text className="text-base text-ink font-semibold mr-2">{(listIndex ?? 0) + 1}.</Text>
             <View className="flex-1">
               <MarkupText text={text} markups={markups} className="text-base text-ink leading-6" />
             </View>

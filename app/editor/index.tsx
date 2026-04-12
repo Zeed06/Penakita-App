@@ -1,39 +1,135 @@
 // app/editor/index.tsx
-// Main post drafting screen containing the block editor
+// Single Spacing Editor - Recovered Manual Toolbar and Zero Gap Spacing
 
-import React, { useState, useRef } from 'react';
-import { View, TextInput, ScrollView, KeyboardAvoidingView, Platform, Pressable, Text, ActivityIndicator, Keyboard } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  TextInput, 
+  KeyboardAvoidingView, 
+  Platform, 
+  Pressable, 
+  Text, 
+  ActivityIndicator, 
+  StyleSheet,
+  ScrollView,
+  SafeAreaView
+} from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+import { 
+  RichText, 
+  useEditorBridge, 
+  TenTapStartKit,
+  PlaceholderBridge,
+  BulletListBridge,
+  OrderedListBridge,
+} from '@10play/tentap-editor';
 
 import { useEditorStore } from '../../src/stores/editor.store';
-import { MediumEditor } from '../../src/components/editor/MediumEditor';
-import { useCreateDraft, useUpdatePost } from '../../src/hooks/useEditor';
 import { uploadToCloudinary } from '../../src/utils/cloudinary';
+import { convertTiptapToBodyModel } from '../../src/utils/editor-converter';
+
+// THE "SINGLE SPACING" SECRET:
+// Tight paragraphs with margin 0.
+// Lists (UL/OL) have padding to show bullets/numbers.
+const BULLETPROOF_CSS = `
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 19px;
+      line-height: 1.4 !important;
+      color: #292929;
+      padding: 10px 0 100px 0 !important;
+      margin: 0;
+      background-color: #ffffff;
+    }
+    .ProseMirror { outline: none; min-height: 300px; }
+    .ProseMirror p { 
+      margin: 0 !important; 
+      padding: 0 !important; 
+    }
+    .ProseMirror h1 { font-size: 28px; margin-top: 5px !important; margin-bottom: 2px !important; }
+    
+    /* LIST STYLING - Precise Indentation */
+    .ProseMirror ul, .ProseMirror ol {
+      margin: 0 !important;
+      padding-left: 1.5em !important;
+      list-style-position: outside !important;
+    }
+    .ProseMirror li {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .ProseMirror li p {
+      margin: 0 !important;
+      display: inline !important;
+    }
+    .ProseMirror ul { list-style-type: disc !important; }
+    .ProseMirror ol { list-style-type: decimal !important; }
+
+    .is-editor-empty:first-child::before {
+      content: attr(data-placeholder);
+      float: left;
+      color: #ced4da;
+      pointer-events: none;
+      height: 0;
+    }
+  </style>
+`;
 
 export default function EditorDraftScreen() {
   const router = useRouter();
   
-  // Editor State
+  // Editor Store State
   const title = useEditorStore((state) => state.title);
   const paragraphs = useEditorStore((state) => state.paragraphs);
   const coverImage = useEditorStore((state) => state.coverImage);
   const setTitle = useEditorStore((state) => state.setTitle);
   const setCoverImage = useEditorStore((state) => state.setCoverImage);
+  const setParagraphs = useEditorStore((state) => state.setParagraphs);
 
   const [isUploadingCover, setIsUploadingCover] = useState(false);
 
+  // Initialize Editor Bridge
+  const editor = useEditorBridge({
+    autofocus: false,
+    avoidIosKeyboard: true,
+    // REMOVED <p></p> TO FIX "ENTER JUMPING 2 LINES"
+    initialContent: `${BULLETPROOF_CSS}`,
+    bridgeExtensions: [
+      ...TenTapStartKit,
+      PlaceholderBridge,
+      BulletListBridge,
+      OrderedListBridge,
+    ],
+    onChange: async () => {
+      const json = await editor.getJSON();
+      const bodyModel = convertTiptapToBodyModel(json);
+      setParagraphs(bodyModel.paragraphs);
+    },
+    theme: {
+      webview: {
+        backgroundColor: '#ffffff',
+      },
+    },
+  });
+
+  // Backup injection for stability
+  useEffect(() => {
+    if (editor) {
+      editor.injectCSS(BULLETPROOF_CSS.replace('<style>', '').replace('</style>', ''));
+      editor.setPlaceholder('Mulai menulis cerita Anda...');
+    }
+  }, [editor]);
+
   const handlePublishFlow = () => {
-    // Check if the post meets minimum requirements to publish
     if (!title.trim() || paragraphs.length === 0 || !paragraphs.some(p => p.text?.trim())) {
       Toast.show({ type: 'error', text1: 'Isi tidak lengkap', text2: 'Judul dan isi artikel harus diisi.' });
       return;
     }
-    
-    // Navigate straight to publish screen (tags selection) without saving a draft
     router.push('/editor/publish');
   };
 
@@ -51,7 +147,6 @@ export default function EditorDraftScreen() {
       setIsUploadingCover(true);
       const uploadedUrl = await uploadToCloudinary(result.assets[0].uri);
       setCoverImage(uploadedUrl);
-      Toast.show({ type: 'success', text1: 'Gambar sampul diunggah' });
     } catch (error) {
       console.error('[Upload Cover Error]', error);
       Toast.show({ type: 'error', text1: 'Gagal mengunggah gambar' });
@@ -60,12 +155,30 @@ export default function EditorDraftScreen() {
     }
   };
 
-  const handleRemoveCover = () => {
-    setCoverImage(null);
-  };
+  const CustomToolbar = () => (
+    <View style={styles.manualToolbar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent}>
+        <Pressable onPress={() => editor.toggleBold()} style={styles.toolbarBtn}>
+          <MaterialCommunityIcons name="format-bold" size={24} color="#495057" />
+        </Pressable>
+        <Pressable onPress={() => editor.toggleItalic()} style={styles.toolbarBtn}>
+          <MaterialCommunityIcons name="format-italic" size={24} color="#495057" />
+        </Pressable>
+        <Pressable onPress={() => editor.toggleHeading(1)} style={styles.toolbarBtn}>
+          <MaterialCommunityIcons name="format-header-1" size={24} color="#495057" />
+        </Pressable>
+        <Pressable onPress={() => editor.toggleOrderedList()} style={styles.toolbarBtn}>
+          <MaterialCommunityIcons name="format-list-numbered" size={24} color="#495057" />
+        </Pressable>
+        <Pressable onPress={() => editor.toggleBulletList()} style={styles.toolbarBtn}>
+          <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#495057" />
+        </Pressable>
+      </ScrollView>
+    </View>
+  );
 
   return (
-    <View className="flex-1 bg-white">
+    <SafeAreaView style={styles.container}>
       <Stack.Screen 
         options={{
           headerShown: true,
@@ -77,49 +190,29 @@ export default function EditorDraftScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <View className="flex-row items-center space-x-2">
-              <Pressable 
-                onPress={handlePublishFlow}
-                className="bg-primary-600 px-4 py-1.5 rounded-full"
-              >
-                <Text className="text-white font-semibold">Terbitkan</Text>
-              </Pressable>
-            </View>
+            <Pressable onPress={handlePublishFlow} className="bg-primary-600 px-4 py-1.5 rounded-full">
+              <Text className="text-white font-semibold">Terbitkan</Text>
+            </Pressable>
           )
         }} 
       />
 
-      {/* Main Content Area */}
       <View style={{ flex: 1 }}>
-        <ScrollView 
-          className="px-5 pt-4"
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 20 }}
-          scrollEnabled={true} // Allow scrolling for Title/Cover, but MediumEditor will take its own space
-        >
-          {/* Title Input */}
+        <View className="px-5 pt-3">
           <TextInput
             value={title}
             onChangeText={setTitle}
             placeholder="Judul Artikel..."
             placeholderTextColor="#ced4da"
             multiline
-            className="text-3xl font-bold text-ink mb-6"
+            className="text-3xl font-bold text-ink mb-1"
             style={{ lineHeight: 40 }}
           />
 
-          {/* Cover Image Section */}
           {coverImage ? (
-            <View className="relative mb-6 rounded-xl overflow-hidden bg-surface-tertiary">
-              <Image 
-                source={{ uri: coverImage }} 
-                className="w-full aspect-video" 
-                contentFit="cover"
-              />
-              <Pressable 
-                onPress={handleRemoveCover}
-                className="absolute top-2 right-2 bg-black/50 p-2 rounded-full"
-              >
+            <View className="relative mb-3 rounded-xl overflow-hidden bg-surface-tertiary">
+              <Image source={{ uri: coverImage }} className="w-full h-48" contentFit="cover" />
+              <Pressable onPress={() => setCoverImage(null)} className="absolute top-2 right-2 bg-black/50 p-2 rounded-full">
                 <Ionicons name="trash-outline" size={20} color="white" />
               </Pressable>
             </View>
@@ -127,25 +220,64 @@ export default function EditorDraftScreen() {
             <Pressable 
               onPress={handlePickCoverImage}
               disabled={isUploadingCover}
-              className="mb-6 h-40 border-2 border-dashed border-surface-tertiary rounded-xl items-center justify-center bg-surface-secondary active:opacity-70"
+              className="mb-3 h-14 border-2 border-dashed border-surface-tertiary rounded-xl flex-row items-center justify-center bg-surface-secondary"
             >
-              {isUploadingCover ? (
-                <ActivityIndicator color="#4c6ef5" />
-              ) : (
+              {isUploadingCover ? <ActivityIndicator color="#4c6ef5" /> : (
                 <>
-                  <Ionicons name="image-outline" size={32} color="#adb5bd" />
-                  <Text className="text-ink-tertiary mt-2 font-medium">Tambah Gambar Sampul</Text>
+                  <Ionicons name="image-outline" size={22} color="#adb5bd" />
+                  <Text className="text-ink-tertiary ml-2 font-medium">Tambah Gambar Sampul</Text>
                 </>
               )}
             </Pressable>
           )}
-        </ScrollView>
-        
-        {/* The new Rich Text Editor */}
-        <View style={{ flex: 1, marginTop: -20 }}>
-          <MediumEditor />
+        </View>
+
+        <View style={{ flex: 1, paddingHorizontal: 20 }}>
+          <RichText editor={editor} style={{ flex: 1 }} />
         </View>
       </View>
-    </View>
+
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        style={styles.absToolbar}
+      >
+        <CustomToolbar />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  absToolbar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
+  manualToolbar: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+    height: 50,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  toolbarContent: {
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  toolbarBtn: {
+    padding: 10,
+    marginHorizontal: 4,
+    borderRadius: 8,
+  }
+});
