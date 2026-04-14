@@ -27,12 +27,7 @@ import { authService } from '../../src/services/auth.service';
 import { TokenStorage } from '../../src/utils/tokenStorage';
 import { useAuthStore } from '../../src/stores/auth.store';
 import { getErrorFromResponse } from '../../src/utils/errorHandler';
-
-// Configure Google Sign-in
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  offlineAccess: false, // Set to true if you need a refresh token for backend to access Google APIs directly
-});
+import { queryClient } from '../../src/providers/QueryProvider';
 
 
 export default function LoginScreen() {
@@ -65,6 +60,9 @@ export default function LoginScreen() {
         expiresIn: data.expiresIn,
         tokenType: data.tokenType,
       });
+      
+      // Force refresh profile data on landed tabs
+      await queryClient.invalidateQueries({ queryKey: ['settings', 'profile'] });
 
       if (data.isNewUser) {
         Toast.show({ type: 'success', text1: 'Selamat datang di Penakita! 🎉' });
@@ -124,6 +122,9 @@ export default function LoginScreen() {
           expiresIn: data.expiresIn,
           tokenType: data.tokenType,
         });
+
+        // Force refresh profile data on landed tabs
+        await queryClient.invalidateQueries({ queryKey: ['settings', 'profile'] });
 
         // The RootLayout or App wrapper will handle fetching the profile
         // and setting it in the store once isLoggedIn becomes true.
@@ -185,22 +186,33 @@ export default function LoginScreen() {
       }
     } catch (error: any) {
       setIsGoogleLoading(false);
+      console.error('Google Sign-In Error Details:', error);
+
       if (isErrorWithCode(error)) {
         switch (error.code) {
           case statusCodes.SIGN_IN_CANCELLED:
             // user cancelled the login flow peacefully
             break;
           case statusCodes.IN_PROGRESS:
-            // operation (e.g. sign in) is in progress already
+            Toast.show({ type: 'info', text1: 'Proses login sedang berjalan' });
             break;
           case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-            Toast.show({ type: 'error', text1: 'Layanan Google Play tidak tersedia di perangkat ini' });
+            Toast.show({ type: 'error', text1: 'Layanan Google Play tidak tersedia' });
             break;
           default:
-            Toast.show({ type: 'error', text1: 'Login Google gagal: ' + error.message });
+            // For modern versions, many dev errors come through as code 10 or 12500
+            Toast.show({ 
+              type: 'error', 
+              text1: 'Login Google gagal: ' + (error.message || 'Error Konfigurasi'),
+              text2: 'Pastikan SHA-1 dan Client ID sudah sesuai di Google Console.'
+            });
         }
       } else {
-        Toast.show({ type: 'error', text1: error.message || 'Terjadi kesalahan saat login Google' });
+        Toast.show({ 
+          type: 'error', 
+          text1: 'Login Google gagal',
+          text2: error instanceof Error ? error.message : 'Kesalahan tidak dikenal'
+        });
       }
     }
   }, [handleGoogleSuccess]);

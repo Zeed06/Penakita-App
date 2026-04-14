@@ -152,3 +152,18 @@ export function useTags() {
     queryFn: () => tagService.getTags(),
   });
 }
+
+export function useMyDrafts() {
+  return useQuery({
+    queryKey: ['posts', 'drafts'],
+    queryFn: () => postService.getDrafts(),
+  });
+}
+
+export function useUserProfilePosts(username: string) {
+  return useQuery({
+    queryKey: ['posts', 'user', username],
+    queryFn: () => postService.getUserPosts(username),
+    enabled: !!username,
+  });
+}

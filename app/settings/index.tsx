@@ -6,6 +6,7 @@ import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { Stack, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLogoutAll } from '../../src/hooks/useSettings';
+import { useAuthStore } from '../../src/stores/auth.store';
 import Toast from 'react-native-toast-message';
 
 export default function SettingsIndexScreen() {
@@ -89,15 +90,27 @@ export default function SettingsIndexScreen() {
               <Ionicons name="chevron-forward" size={18} color="#adb5bd" />
             </Pressable>
           </Link>
+          
+          <Pressable 
+            onPress={() => useAuthStore.getState().logout()}
+            className="flex-row items-center justify-between px-5 py-4 border-b border-border-faint active:bg-surface-secondary"
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="log-out-outline" size={20} color="#f03e3e" />
+              <Text className="text-base text-red-600 font-semibold ml-3">Keluar</Text>
+            </View>
+          </Pressable>
+
           <Pressable 
             disabled={isPending}
             onPress={handleLogoutAll}
-            className="flex-row items-center justify-between px-5 py-4"
+            className="flex-row items-center justify-between px-5 py-4 active:bg-surface-secondary"
           >
             <View className="flex-row items-center">
-              <Ionicons name="warning-outline" size={20} color="#f03e3e" />
-              <Text className="text-base text-red-600 ml-3">Keluar dari Semua Perangkat</Text>
+              <Ionicons name="warning-outline" size={20} color="#adb5bd" />
+              <Text className="text-sm text-ink-faint ml-3">Keluar dari semua perangkat</Text>
             </View>
+            <Ionicons name="chevron-forward" size={16} color="#adb5bd" />
           </Pressable>
         </View>
       </View>

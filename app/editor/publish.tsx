@@ -6,16 +6,18 @@ import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 
-import { useTags, usePublishArticle } from '../../src/hooks/useEditor';
+import { useTags, usePublishArticle, useCreateDraft, useUpdatePost } from '../../src/hooks/useEditor';
 import { useEditorStore } from '../../src/stores/editor.store';
 
 export default function PublishScreen() {
   const router = useExpRouter();
-  const { title, paragraphs, coverImage, resetEditor } = useEditorStore();
+  const { title, paragraphs, coverImage, currentDraftId, setCurrentDraftId, resetEditor } = useEditorStore();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   
   const { data: tags, isLoading: isTagsLoading } = useTags();
   const { mutate: publishArticle, isPending: isPublishing } = usePublishArticle();
+  const { mutate: createDraft, isPending: isCreatingDraft } = useCreateDraft();
+  const { mutate: updatePost, isPending: isUpdatingPost } = useUpdatePost();
 
   const toggleTag = (tagId: string) => {
     setSelectedTags((prev) => {
@@ -52,6 +54,44 @@ export default function PublishScreen() {
     );
   };
 
+  const handleSaveDraft = () => {
+    const data: any = { 
+      title, 
+      bodyModel: { paragraphs } 
+    };
+    if (coverImage) data.coverImage = coverImage;
+
+    if (currentDraftId) {
+      updatePost(
+        { id: currentDraftId, data },
+        {
+        onSuccess: () => {
+          Toast.show({ type: 'success', text1: 'berhasil simpan Di Drafts' });
+          resetEditor();
+          router.replace('/(tabs)');
+        },
+          onError: (err: any) => {
+            const msg = err?.response?.data?.error?.message || 'Coba lagi nanti.';
+            Toast.show({ type: 'error', text1: 'Gagal memperbarui draft', text2: msg });
+          }
+        }
+      );
+    } else {
+      createDraft(data, {
+        onSuccess: (result) => {
+          setCurrentDraftId(result.id);
+          Toast.show({ type: 'success', text1: 'berhasil simpan Di Drafts' });
+          resetEditor();
+          router.replace('/(tabs)');
+        },
+        onError: (err: any) => {
+          const msg = err?.response?.data?.error?.message || 'Coba lagi nanti.';
+          Toast.show({ type: 'error', text1: 'Gagal menyimpan draft', text2: msg });
+        }
+      });
+    }
+  };
+
   return (
     <View className="flex-1 bg-white">
       <Stack.Screen 
@@ -65,15 +105,24 @@ export default function PublishScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable 
-              onPress={handlePublish}
-              disabled={isPublishing}
-              className={`bg-primary-600 px-4 py-1.5 rounded-full ${isPublishing ? 'opacity-50' : ''}`}
-            >
-              <Text className="text-white font-semibold text-sm">
-                {isPublishing ? '...' : 'Terbitkan'}
-              </Text>
-            </Pressable>
+            <View className="flex-row items-center space-x-2">
+              <Pressable 
+                onPress={handleSaveDraft} 
+                disabled={isCreatingDraft || isUpdatingPost || isPublishing}
+                className="px-3 py-1.5"
+              >
+                <Text className="text-primary-600 font-semibold text-sm">Simpan</Text>
+              </Pressable>
+              <Pressable 
+                onPress={handlePublish}
+                disabled={isPublishing || isCreatingDraft || isUpdatingPost}
+                className={`bg-primary-600 px-4 py-1.5 rounded-full ml-1 ${isPublishing ? 'opacity-50' : ''}`}
+              >
+                <Text className="text-white font-semibold text-sm">
+                  {isPublishing ? '...' : 'Terbitkan'}
+                </Text>
+              </Pressable>
+            </View>
           )
         }} 
       />

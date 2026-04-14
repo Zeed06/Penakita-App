@@ -105,4 +105,14 @@ export const postService = {
   deletePost: async (id: string): Promise<void> => {
     await api.delete(ENDPOINTS.POSTS.DELETE(id));
   },
+  
+  getDrafts: async (): Promise<FeedResponse> => {
+    const response = await api.get<FeedResponse>(ENDPOINTS.POSTS.MY_DRAFTS);
+    return response.data;
+  },
+
+  getUserPosts: async (username: string): Promise<FeedResponse> => {
+    const response = await api.get<FeedResponse>(ENDPOINTS.USERS.POSTS(username));
+    return response.data;
+  },
 };

@@ -9,21 +9,20 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
 import { useSettingsProfile } from '../../src/hooks/useSettings';
-import { useFeed } from '../../src/hooks/useFeed';
+import { useUserProfilePosts } from '../../src/hooks/useEditor';
 import { PostCard } from '../../src/components/feed/PostCard';
 
 export default function CurrentUserProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { data: profile, isLoading, error } = useSettingsProfile();
-  const { data: feedData } = useFeed();
+  const { data: userPosts, isLoading: isUserPostsLoading } = useUserProfilePosts(profile?.username || '');
 
   const [activeTab, setActiveTab] = useState('Stories');
   const [storyFilter, setStoryFilter] = useState<'Draft' | 'Published'>('Published');
 
-  const myPublishedPosts = feedData?.pages
-    .flatMap((page) => page.items)
-    .filter((post) => post.author.username === profile?.username) || [];
+  const myPublishedPosts = userPosts?.items.filter((post) => post.status === 'published') || [];
+  const myDraftPosts = userPosts?.items.filter((post) => post.status === 'draft') || [];
 
   if (isLoading) {
     return (
@@ -63,7 +62,7 @@ export default function CurrentUserProfileScreen() {
             ) : (
               <View className="w-20 h-20 rounded-full bg-[#af52de] items-center justify-center">
                 <Text className="text-white text-3xl font-bold">
-                  {(profile.fullName || profile.username || '?').charAt(0).toUpperCase()}
+                  {(profile.username || profile.fullName || '?').charAt(0).toUpperCase()}
                 </Text>
               </View>
             )}
@@ -127,14 +126,31 @@ export default function CurrentUserProfileScreen() {
               </View>
 
               {storyFilter === 'Draft' ? (
-                <View className="items-center justify-center py-10 border border-[#e6e6e6] rounded-xl bg-surface">
-                  <Text className="text-base font-bold text-[#242424]">
-                    You don't have any draft posts.
-                  </Text>
+                <View className="pb-10">
+                  {isUserPostsLoading ? (
+                    <ActivityIndicator size="small" color="#4c6ef5" className="py-10" />
+                  ) : myDraftPosts.length > 0 ? (
+                    myDraftPosts.map((post) => (
+                      <View key={post.id} className="mb-4 opacity-70">
+                        <PostCard post={post} />
+                        <View className="absolute top-2 right-2 bg-gray-100 px-2 py-0.5 rounded">
+                          <Text className="text-[10px] font-bold text-gray-500 uppercase">Draft</Text>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <View className="items-center justify-center py-10 border border-[#e6e6e6] rounded-xl bg-surface">
+                      <Text className="text-base font-bold text-[#242424]">
+                        You don't have any draft posts.
+                      </Text>
+                    </View>
+                  )}
                 </View>
               ) : (
                 <View className="pb-10">
-                  {myPublishedPosts.length > 0 ? (
+                  {isUserPostsLoading ? (
+                    <ActivityIndicator size="small" color="#4c6ef5" className="py-10" />
+                  ) : myPublishedPosts.length > 0 ? (
                     myPublishedPosts.map((post) => (
                       <View key={post.id} className="mb-4">
                         <PostCard post={post} />

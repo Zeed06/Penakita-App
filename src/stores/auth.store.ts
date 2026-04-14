@@ -2,8 +2,16 @@
 // Zustand store for client auth state
 
 import { create } from 'zustand';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { User, Tokens } from '../types/auth.types';
 import { TokenStorage } from '../utils/tokenStorage';
+import { queryClient } from '../providers/QueryProvider';
+
+// Configure Google Sign-in globally
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  offlineAccess: false,
+});
 
 interface AuthState {
   user: User | null;
@@ -16,7 +24,7 @@ interface AuthActions {
   setUser: (user: User) => void;
 
   /** Clear auth state and tokens — called on logout or forced logout */
-  logout: () => void;
+  logout: () => Promise<void>;
 
   /**
    * Initialize auth on app startup.
@@ -42,9 +50,20 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({ user, isLoggedIn: true });
   },
 
-  logout: () => {
-    // Clear tokens asynchronously — fire and forget
-    TokenStorage.clear().catch(() => {});
+  logout: async () => {
+    try {
+      // 1. Clear Google Sign-In session if active
+      // Direct call to signOut is robust across library versions as we are in a try-catch
+      await GoogleSignin.signOut();
+    } catch (error) {
+      console.error('Google Sign-Out Error:', error);
+    }
+
+    // 2. Clear TanStack Query cache to prevent stale data leaking
+    queryClient.clear();
+
+    // 3. Clear tokens and local state
+    await TokenStorage.clear().catch(() => {});
     set({ user: null, isLoggedIn: false, isLoading: false });
   },
 

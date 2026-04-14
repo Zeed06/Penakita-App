@@ -20,6 +20,7 @@ export function useSettingsProfile() {
 // --- Helper: Sync user data across multiple query caches ---
 function syncUserCache(queryClient: any, updatedProfile: any) {
   // 1. Cross-Cache Synchronization: Update all articles in all feeds where I am the author
+  // This will match ['posts', 'feed'], ['posts', 'bookmarks'], etc.
   queryClient.setQueriesData({ queryKey: ['posts'] }, (old: any) => {
     if (!old) return old;
 
@@ -63,6 +64,9 @@ function syncUserCache(queryClient: any, updatedProfile: any) {
 
     return old;
   });
+
+  // Also invalidate specific user profile key to be safe
+  queryClient.invalidateQueries({ queryKey: ['user', updatedProfile.username] });
 }
 
 export function useUpdateProfile() {
@@ -74,6 +78,11 @@ export function useUpdateProfile() {
     onSuccess: (updatedProfile) => {
       const currentUser = useAuthStore.getState().user;
       
+      // If username changed, invalidate the old username query to prevent stale data
+      if (currentUser && currentUser.username !== updatedProfile.username) {
+        queryClient.invalidateQueries({ queryKey: ['user', currentUser.username] });
+      }
+
       // Merge logic: If backend returns null avatar but we have one, keep it.
       const mergedProfile = {
         ...updatedProfile,
@@ -82,7 +91,6 @@ export function useUpdateProfile() {
 
       // Update specific queries that rely on the user profile
       queryClient.setQueryData(['settings', 'profile'], mergedProfile);
-      queryClient.invalidateQueries({ queryKey: ['user', updatedProfile.username] });
       
       // 1. Sync cache across posts
       syncUserCache(queryClient, mergedProfile);
@@ -95,7 +103,7 @@ export function useUpdateProfile() {
         fullName: mergedProfile.fullName,
         bio: mergedProfile.bio ?? null,
         avatarUrl: mergedProfile.avatarUrl,
-        provider: 'email',
+        provider: currentUser?.provider || 'email',
         emailVerified: mergedProfile.isEmailVerified,
         createdAt: mergedProfile.createdAt,
         updatedAt: new Date().toISOString(),

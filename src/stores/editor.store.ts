@@ -7,11 +7,13 @@ interface EditorState {
   paragraphs: Paragraph[];
   coverImage: string | null;
   activeParagraphId: string | null;
+  currentDraftId: string | null;
 
   // Actions
   setTitle: (title: string) => void;
   setCoverImage: (uri: string | null) => void;
   setActiveParagraph: (id: string | null) => void;
+  setCurrentDraftId: (id: string | null) => void;
   
   // Block Operations
   addParagraph: (afterId?: string, type?: ParagraphType, text?: string) => void;
@@ -35,6 +37,7 @@ const DEFAULT_STATE = {
   paragraphs: [createEmptyParagraph()],
   coverImage: null,
   activeParagraphId: null,
+  currentDraftId: null,
 };
 
 export const useEditorStore = create<EditorState>()((set, get) => ({
@@ -45,6 +48,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   setCoverImage: (coverImage) => set({ coverImage }),
   
   setActiveParagraph: (id) => set({ activeParagraphId: id }),
+
+  setCurrentDraftId: (id) => set({ currentDraftId: id }),
 
   addParagraph: (afterId, type = 'P', text = '') => set((state) => {
     const newPara = createEmptyParagraph(type, text);

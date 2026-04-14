@@ -30,7 +30,7 @@ export const ENDPOINTS = {
     UPDATE: (id: string) => `/api/posts/${id}` as const,
     DELETE: (id: string) => `/api/posts/${id}` as const,
     PUBLISH: (id: string) => `/api/posts/${id}/publish` as const,
-    // MY_DRAFTS: '/api/posts/drafts', // Belum ada di backend
+    MY_DRAFTS: '/api/posts/drafts',
   },
 
   // Comments

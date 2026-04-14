@@ -12,8 +12,9 @@ import {
   ActivityIndicator, 
   StyleSheet,
   ScrollView,
-  SafeAreaView
+  Keyboard
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -29,6 +30,7 @@ import {
 } from '@10play/tentap-editor';
 
 import { useEditorStore } from '../../src/stores/editor.store';
+import { useCreateDraft, useUpdatePost } from '../../src/hooks/useEditor';
 import { uploadToCloudinary } from '../../src/utils/cloudinary';
 import { convertTiptapToBodyModel } from '../../src/utils/editor-converter';
 
@@ -87,11 +89,18 @@ export default function EditorDraftScreen() {
   const title = useEditorStore((state) => state.title);
   const paragraphs = useEditorStore((state) => state.paragraphs);
   const coverImage = useEditorStore((state) => state.coverImage);
+  const currentDraftId = useEditorStore((state) => state.currentDraftId);
   const setTitle = useEditorStore((state) => state.setTitle);
   const setCoverImage = useEditorStore((state) => state.setCoverImage);
   const setParagraphs = useEditorStore((state) => state.setParagraphs);
+  const setCurrentDraftId = useEditorStore((state) => state.setCurrentDraftId);
+  const resetEditor = useEditorStore((state) => state.resetEditor);
 
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+
+  // Hooks
+  const { mutate: createDraft, isPending: isCreatingDraft } = useCreateDraft();
+  const { mutate: updatePost, isPending: isUpdatingPost } = useUpdatePost();
 
   // Initialize Editor Bridge
   const editor = useEditorBridge({
@@ -131,6 +140,49 @@ export default function EditorDraftScreen() {
       return;
     }
     router.push('/editor/publish');
+  };
+
+  const handleSaveDraft = () => {
+    if (!title.trim()) {
+      Toast.show({ type: 'error', text1: 'Judul kosong', text2: 'Berikan judul sebelum menyimpan draft.' });
+      return;
+    }
+
+    const data: any = { 
+      title, 
+      bodyModel: { paragraphs } 
+    };
+    if (coverImage) data.coverImage = coverImage;
+
+    if (currentDraftId) {
+      updatePost(
+        { id: currentDraftId, data },
+        {
+        onSuccess: () => {
+          Toast.show({ type: 'success', text1: 'berhasil simpan Di Drafts' });
+          resetEditor();
+          router.replace('/(tabs)');
+        },
+          onError: (err: any) => {
+            const msg = err?.response?.data?.error?.message || 'Coba lagi nanti.';
+            Toast.show({ type: 'error', text1: 'Gagal memperbarui draft', text2: msg });
+          }
+        }
+      );
+    } else {
+      createDraft(data, {
+        onSuccess: (result) => {
+          setCurrentDraftId(result.id);
+          Toast.show({ type: 'success', text1: 'berhasil simpan Di Drafts' });
+          resetEditor();
+          router.replace('/(tabs)');
+        },
+        onError: (err: any) => {
+          const msg = err?.response?.data?.error?.message || 'Coba lagi nanti.';
+          Toast.show({ type: 'error', text1: 'Gagal menyimpan draft', text2: msg });
+        }
+      });
+    }
   };
 
   const handlePickCoverImage = async () => {
@@ -190,9 +242,18 @@ export default function EditorDraftScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPress={handlePublishFlow} className="bg-primary-600 px-4 py-1.5 rounded-full">
-              <Text className="text-white font-semibold">Terbitkan</Text>
-            </Pressable>
+            <View className="flex-row items-center space-x-2">
+              <Pressable 
+                onPress={handleSaveDraft} 
+                disabled={isCreatingDraft || isUpdatingPost}
+                className="px-3 py-1.5"
+              >
+                <Text className="text-primary-600 font-semibold">Simpan</Text>
+              </Pressable>
+              <Pressable onPress={handlePublishFlow} className="bg-primary-600 px-4 py-1.5 rounded-full ml-2">
+                <Text className="text-white font-semibold">Terbitkan</Text>
+              </Pressable>
+            </View>
           )
         }} 
       />
@@ -238,7 +299,7 @@ export default function EditorDraftScreen() {
       </View>
 
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         style={styles.absToolbar}
       >
@@ -254,10 +315,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   absToolbar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
     zIndex: 1000,
   },
   manualToolbar: {
